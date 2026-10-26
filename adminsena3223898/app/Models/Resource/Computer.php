@@ -16,10 +16,7 @@ class Computer extends Model
         'serial_num',
         'numero',
         'marca',
-    ];
-    
-    protected $guarded = [
-        'urlFoto'
+        'urlFoto',
     ];
 
     public function apprentices()

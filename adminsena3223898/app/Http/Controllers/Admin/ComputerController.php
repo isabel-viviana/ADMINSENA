@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ComputerRequest;
 use Illuminate\Http\Request;
 use App\Models\Resource\Computer;
+use Cloudinary\Cloudinary;
+use Cloudinary\Api\Exception\ApiError;
+use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Log;
 
 class ComputerController extends Controller
 {
@@ -50,8 +54,23 @@ class ComputerController extends Controller
     public function apiStore(ComputerRequest $request)
     {
         $data = $request->validated();
+        $file = $data['urlFoto'];
+        unset($data['urlFoto']);
 
-        return response()->json(Computer::create($data), 201);
+        $cloudinary = new Cloudinary(config('services.cloudinary'));
+        $result = $cloudinary->uploadApi()->upload(
+            $file->getRealPath(),
+            [
+                'folder' => 'computadores',
+                'resource_type' => 'image',
+            ]
+        );
+
+        $computer = Computer::create($data);
+        $computer->urlFoto = $result['secure_url'];
+        $computer->save();
+
+        return response()->json($computer, 201);
     }
 
     public function apiUpdate(ComputerRequest $request, Computer $computer)
@@ -72,23 +91,40 @@ class ComputerController extends Controller
 
     public function store(Request $request)
     {
-        $computer = Computer::create([
-            'serial_num' => $request->numero,
-            'numero' => $request->numero,
-            'marca' => $request->marca
+        $data = $request->validate([
+            'numero' => ['required', 'string', 'max:255'],
+            'marca' => ['required', 'string', 'max:255'],
+            'urlFoto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
-        // ADJUNTAR
-        $file = $request->file("urlFoto");
+        $cloudinary = new Cloudinary(config('services.cloudinary'));
 
-        if ($file) {
-            $nombreArchivo = "foto_".time().".".$file->guessExtension();
-            $request->file('urlFoto')->storeAs('public/images', $nombreArchivo);
+        try {
+            $resultado = $cloudinary->uploadApi()->upload(
+                $request->file('urlFoto')->getRealPath(),
+                [
+                    'folder' => 'computadores',
+                    'resource_type' => 'image',
+                ]
+            );
+        } catch (ApiError|GuzzleException $exception) {
+            Log::error('Cloudinary image upload failed.', [
+                'exception' => $exception::class,
+                'code' => $exception->getCode(),
+            ]);
 
-            $computer->urlFoto = $nombreArchivo;
-            $computer->save();
+            return back()->withInput()->withErrors([
+                'urlFoto' => 'No se pudo subir la imagen a Cloudinary. Revisa el archivo y los registros del servidor.',
+            ]);
         }
-         
+
+        Computer::create([
+            'serial_num' => $data['numero'],
+            'numero' => $data['numero'],
+            'marca' => $data['marca'],
+            'urlFoto' => $resultado['secure_url'],
+        ]);
+
         return redirect()->route('computer.index');
     }
 

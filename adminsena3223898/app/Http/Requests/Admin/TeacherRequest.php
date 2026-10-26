@@ -25,6 +25,12 @@ class TeacherRequest extends FormRequest
             'training_centers_id' => ['required', 'exists:training_centers,id'],
             'courses' => ['nullable', 'array'],
             'courses.*' => ['integer', 'exists:courses,id'],
+            'urlFoto' => [
+                $this->isMethod('POST') ? 'required' : 'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
         ];
     }
 

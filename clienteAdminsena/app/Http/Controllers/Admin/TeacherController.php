@@ -54,8 +54,32 @@ class TeacherController extends Controller
 
     public function store(Request $request)
     {
-        $url = env('URL_SERVER_API');
-        Http::post($url . '/teachers', $request->all());
+        $request->validate([
+            'urlFoto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $file = $request->file('urlFoto');
+        $url = rtrim(env('URL_SERVER_API'), '/');
+        $data = $request->except(['_token', 'courses', 'urlFoto']);
+
+        foreach ($request->input('courses', []) as $index => $courseId) {
+            $data["courses[$index]"] = $courseId;
+        }
+
+        $response = Http::attach(
+            'urlFoto',
+            file_get_contents($file->getRealPath()),
+            $file->getClientOriginalName()
+        )->post($url . '/teachers', $data);
+
+        if (!$response->successful()) {
+            return back()
+                ->withErrors($response->json('errors', [
+                    'urlFoto' => 'No se pudo registrar el docente.',
+                ]))
+                ->withInput();
+        }
+
         return redirect()->route('teacher.index');
     }
 

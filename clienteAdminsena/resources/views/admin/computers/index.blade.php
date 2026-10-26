@@ -42,12 +42,11 @@
                                         <td>{{ $computer->id }}</td>
                                         <td>{{ $computer->numero }}</td>
                                         <td>{{ $computer->marca }}</td>
-                                        <td><img
-                                            src="{{ asset('storage/images/' . $computer->urlFoto) }}"
-                                            alt="Imagen del producto"
-                                            width="80"
-                                            height="80"
-                                            style="object-fit: cover; border-radius: 5px;">               </td>
+                                        <td>
+                                            @if($computer->urlFoto)
+                                                <img src="{{ $computer->urlFoto }}" alt="Imagen del computador" width="80" height="80" style="object-fit: cover; border-radius: 5px;">
+                                            @endif
+                                        </td>
                                         <td>
                                             <a href="{{ route('computer.show', $computer->id) }}" class="btn btn-sm btn-info">Ver más</a>
                                             <a href="{{ route('computer.edit', $computer->id) }}" class="btn btn-sm btn-warning">Editar</a>

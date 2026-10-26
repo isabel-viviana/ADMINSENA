@@ -9,6 +9,10 @@ use App\Models\People\Teacher;
 use App\Models\Catalog\Area;
 use App\Models\Catalog\TrainingCenter;
 use App\Models\Academic\Course;
+use Cloudinary\Cloudinary;
+use Cloudinary\Api\Exception\ApiError;
+use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
 {
@@ -60,9 +64,23 @@ class TeacherController extends Controller
     {
         $data = $request->validated();
 
+        $file = $data['urlFoto'];
+        unset($data['urlFoto']);
         $courseIds = $data['courses'] ?? [];
         unset($data['courses']);
+
+        $cloudinary = new Cloudinary(config('services.cloudinary'));
+        $result = $cloudinary->uploadApi()->upload(
+            $file->getRealPath(),
+            [
+                'folder' => 'docentes',
+                'resource_type' => 'image',
+            ]
+        );
+
         $teacher = Teacher::create($data);
+        $teacher->urlFoto = $result['secure_url'];
+        $teacher->save();
         $teacher->courses()->sync($courseIds);
 
         return response()->json($teacher->load(['area', 'trainingCenter', 'courses', 'person']), 201);
@@ -89,24 +107,40 @@ class TeacherController extends Controller
 
     public function store(Request $request)
     {
-        $teacherData = $request->except('courses');
+        $data = $request->validate([
+            'urlFoto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $cloudinary = new Cloudinary(config('services.cloudinary'));
+
+        try {
+            $result = $cloudinary->uploadApi()->upload(
+                $data['urlFoto']->getRealPath(),
+                [
+                    'folder' => 'docentes',
+                    'resource_type' => 'image',
+                ]
+            );
+        } catch (ApiError|GuzzleException $exception) {
+            Log::error('Cloudinary teacher image upload failed.', [
+                'exception' => $exception::class,
+                'code' => $exception->getCode(),
+            ]);
+
+            return back()->withInput()->withErrors([
+                'urlFoto' => 'No se pudo subir la imagen a Cloudinary. Revisa el archivo y los registros del servidor.',
+            ]);
+        }
+
+        $teacherData = $request->except(['courses', 'urlFoto']);
         $teacher = Teacher::create($teacherData);
-        
-        // Asignar profesores a través de la tabla intermedia
+        $teacher->urlFoto = $result['secure_url'];
+        $teacher->save();
+
         if ($request->has('courses') && !empty($request->courses)) {
             $teacher->courses()->attach($request->courses);
         }
 
-        $file = $request->file("urlFoto");
-
-        if ($file) {
-            $nombreArchivo = "foto_".time().".".$file->guessExtension();
-            $request->file('urlFoto')->storeAs('public/images', $nombreArchivo);
-
-            $teacher->urlFoto = $nombreArchivo;
-            $teacher->save();
-        }
-        
         return redirect()->route('teacher.index');
     }
 

@@ -9,7 +9,7 @@ use App\Http\Controllers\Admin\TrainingCenterController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('dashboard');
 })->name('home');
 
 $mainAppUrl = str_replace('/api', '', env('URL_SERVER_API'));

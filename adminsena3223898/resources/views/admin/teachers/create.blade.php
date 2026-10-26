@@ -6,6 +6,16 @@
 
     @csrf
 
+    @if ($errors->any())
+        <div class="alert alert-danger" role="alert">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="mb-3">
         <label for="name" class="form-label">Nombre</label>
         <input type="text" name="name" id="name" class="form-control">
@@ -48,7 +58,8 @@
             <br>
         <input type="text" name="marca" id="marca" class="form-control">
         <br>
-        <input type="file" name="urlFoto" class="form-control-file" accept="image/*">
+        <input type="file" name="urlFoto" class="form-control-file" accept=".jpg,.jpeg,.png,.webp" required>
+        <small class="form-text text-muted">Formatos JPG, PNG o WEBP; máximo 5 MB.</small>
 
     </div>
 

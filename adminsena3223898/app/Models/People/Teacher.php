@@ -24,10 +24,7 @@ class Teacher extends Model
         'email',
         'area_id',
         'training_centers_id',
-    ];
-
-    protected $guarded = [
-        'urlFoto'
+        'urlFoto',
     ];
 
     public function area()

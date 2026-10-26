@@ -19,6 +19,12 @@ class ComputerRequest extends FormRequest
             'serial_num' => ['required', 'string', 'max:255'],
             'numero' => ['nullable', 'string', 'max:255'],
             'marca' => ['nullable', 'string', 'max:255'],
+            'urlFoto' => [
+                $this->isMethod('POST') ? 'required' : 'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
         ];
     }
 

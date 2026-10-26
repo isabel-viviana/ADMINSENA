@@ -47,14 +47,36 @@ class ComputerController extends Controller
         return view('admin.computers.create');
     }
 
+
     public function store(Request $request)
     {
-        $url = env('URL_SERVER_API');
-        Http::post($url . '/computers', [
-            'serial_num' => $request->numero,
-            'numero' => $request->numero,
-            'marca' => $request->marca,
+        $data = $request->validate([
+            'numero' => ['required', 'string', 'max:255'],
+            'marca' => ['required', 'string', 'max:255'],
+            'urlFoto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
+
+        $file = $request->file('urlFoto');
+        $url = rtrim(env('URL_SERVER_API'), '/');
+
+        $response = Http::attach(
+            'urlFoto',
+            file_get_contents($file->getRealPath()),
+            $file->getClientOriginalName()
+        )->post($url . '/computers', [
+            'serial_num' => $data['numero'],
+            'numero' => $data['numero'],
+            'marca' => $data['marca'],
+        ]);
+
+        if (!$response->successful()) {
+            return back()
+                ->withErrors($response->json('errors', [
+                    'urlFoto' => 'No se pudo registrar el computador.',
+                ]))
+                ->withInput();
+        }
+
         return redirect()->route('computer.index');
     }
 
